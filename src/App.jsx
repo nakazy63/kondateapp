@@ -120,9 +120,20 @@ async function callGemini(history, apiKey, avoidNote) {
   }
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("No text in response");
+  if (!text) {
+    const blockReason = data?.promptFeedback?.blockReason;
+    throw new Error(
+      blockReason
+        ? `応答がブロックされました (reason: ${blockReason})`
+        : `応答にテキストが含まれていません: ${JSON.stringify(data).slice(0, 300)}`
+    );
+  }
   const cleaned = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch (parseErr) {
+    throw new Error(`JSONの解析に失敗しました: ${cleaned.slice(0, 300)}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +246,7 @@ function ClarifyCard({ message }) {
   );
 }
 
-function ErrorCard({ onRetry }) {
+function ErrorCard({ onRetry, detail }) {
   return (
     <div
       style={{
@@ -250,6 +261,23 @@ function ErrorCard({ onRetry }) {
       }}
     >
       うまくレシピを作れませんでした。もう一度試してください。
+      {detail && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: "8px 10px",
+            background: "#F6D9D2",
+            borderRadius: 8,
+            fontFamily: "monospace",
+            fontSize: 12,
+            color: "#5C2013",
+            wordBreak: "break-word",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {detail}
+        </div>
+      )}
       <button
         onClick={onRetry}
         style={{
@@ -785,17 +813,19 @@ export default function App() {
   }, [messages]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("recipe-log");
-      if (raw) setHistory(JSON.parse(raw));
-    } catch (e) {
-      // まだ記録がない場合、または読み込みに失敗した場合はここに来る
-    }
+    (async () => {
+      try {
+        const res = await window.storage.get("recipe-log", false);
+        if (res && res.value) setHistory(JSON.parse(res.value));
+      } catch (e) {
+        // まだ記録がない場合はここに来る
+      }
+    })();
   }, []);
 
-  const persistHistory = (list) => {
+  const persistHistory = async (list) => {
     try {
-      localStorage.setItem("recipe-log", JSON.stringify(list));
+      await window.storage.set("recipe-log", JSON.stringify(list), false);
     } catch (e) {
       console.error("Failed to save recipe log", e);
     }
@@ -816,8 +846,13 @@ export default function App() {
         prev.map((m) => (m.id === assistantId ? { ...m, status: "done", data } : m))
       );
     } catch (e) {
+      console.error("recipe generation failed", e);
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, status: "error" } : m))
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, status: "error", errorMessage: e?.message || String(e) }
+            : m
+        )
       );
     }
   };
@@ -1102,7 +1137,9 @@ export default function App() {
               }
               if (m.status === "loading") return <LoadingCard key={m.id} />;
               if (m.status === "error")
-                return <ErrorCard key={m.id} onRetry={() => handleRetry(m.id)} />;
+                return (
+                  <ErrorCard key={m.id} onRetry={() => handleRetry(m.id)} detail={m.errorMessage} />
+                );
               if (m.data?.type === "clarify")
                 return <ClarifyCard key={m.id} message={m.data.message} />;
               if (m.data?.type === "recipe")
@@ -1143,13 +1180,17 @@ export default function App() {
                 padding: 6,
               }}
             >
-              <input
+              <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSend();
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    handleSend();
+                  }
                 }}
-                placeholder="にんじん、鶏もも肉、じゃがいも..."
+                placeholder="にんじん、鶏もも肉、じゃがいも...（Ctrl+Enterで送信）"
+                rows={1}
                 style={{
                   flex: 1,
                   border: "none",
@@ -1159,6 +1200,8 @@ export default function App() {
                   fontFamily: "'Nunito Sans', sans-serif",
                   fontSize: 14.5,
                   color: COLORS.ink,
+                  resize: "none",
+                  maxHeight: 120,
                 }}
               />
               <button
@@ -1173,11 +1216,22 @@ export default function App() {
                   padding: "0 20px",
                   borderRadius: 10,
                   cursor: "pointer",
+                  alignSelf: "flex-end",
                 }}
               >
                 送信
               </button>
             </div>
+            <p
+              style={{
+                margin: "6px 4px 0",
+                fontFamily: "'Nunito Sans', sans-serif",
+                fontSize: 11.5,
+                color: COLORS.inkSoft,
+              }}
+            >
+              Enterで改行 ・ Ctrl+Enter(Macは⌘+Enter)で送信
+            </p>
           </div>
         )}
       </div>
