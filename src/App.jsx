@@ -813,19 +813,17 @@ export default function App() {
   }, [messages]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get("recipe-log", false);
-        if (res && res.value) setHistory(JSON.parse(res.value));
-      } catch (e) {
-        // まだ記録がない場合はここに来る
-      }
-    })();
+    try {
+      const raw = localStorage.getItem("recipe-log");
+      if (raw) setHistory(JSON.parse(raw));
+    } catch (e) {
+      // まだ記録がない場合、または読み込みに失敗した場合はここに来る
+    }
   }, []);
 
-  const persistHistory = async (list) => {
+  const persistHistory = (list) => {
     try {
-      await window.storage.set("recipe-log", JSON.stringify(list), false);
+      localStorage.setItem("recipe-log", JSON.stringify(list));
     } catch (e) {
       console.error("Failed to save recipe log", e);
     }
