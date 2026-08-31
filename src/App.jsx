@@ -89,7 +89,7 @@ const SYSTEM_PROMPT = `あなたは家庭料理のレシピを考える専門家
   "note": "冷蔵庫にありがちな代用食材や、大人向けのアレンジなど（任意、なければ空文字）"
 }`;
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 
 function buildGeminiContents(history) {
   return history
