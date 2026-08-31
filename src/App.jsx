@@ -814,6 +814,31 @@ export default function App() {
 
   useEffect(() => {
     try {
+      const savedKey = localStorage.getItem("gemini-api-key");
+      if (savedKey) {
+        setApiKey(savedKey);
+        setShowKeyInput(false);
+      }
+    } catch (e) {
+      // 読み込みに失敗した場合は通常通り入力を求める
+    }
+  }, []);
+
+  const saveApiKey = (key) => {
+    setApiKey(key);
+    try {
+      if (key) {
+        localStorage.setItem("gemini-api-key", key);
+      } else {
+        localStorage.removeItem("gemini-api-key");
+      }
+    } catch (e) {
+      console.error("Failed to save API key", e);
+    }
+  };
+
+  useEffect(() => {
+    try {
       const raw = localStorage.getItem("recipe-log");
       if (raw) setHistory(JSON.parse(raw));
     } catch (e) {
@@ -949,16 +974,18 @@ export default function App() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: "100dvh",
         background: COLORS.bg,
         display: "flex",
         justifyContent: "center",
+        overflow: "hidden",
       }}
     >
       <style>{`
         ${FONT_IMPORT}
         @keyframes kondate-spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
+        html, body, #root { height: 100%; margin: 0; }
         ::placeholder { color: ${COLORS.inkSoft}; opacity: 0.7; }
       `}</style>
 
@@ -968,7 +995,8 @@ export default function App() {
           maxWidth: 560,
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          height: "100%",
+          minHeight: 0,
         }}
       >
         {/* ヘッダー */}
@@ -976,6 +1004,7 @@ export default function App() {
           style={{
             padding: "22px 20px 16px",
             background: COLORS.bg,
+            flexShrink: 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1013,63 +1042,99 @@ export default function App() {
                 borderRadius: 12,
                 padding: "10px 12px",
                 display: "flex",
+                flexDirection: "column",
                 gap: 8,
-                alignItems: "center",
               }}
             >
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Gemini APIキーを入力"
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Gemini APIキーを入力"
+                  style={{
+                    flex: 1,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 8,
+                    padding: "7px 10px",
+                    fontFamily: "'Nunito Sans', sans-serif",
+                    fontSize: 13,
+                    color: COLORS.ink,
+                    background: COLORS.surface,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (!apiKey) return;
+                    saveApiKey(apiKey);
+                    setShowKeyInput(false);
+                  }}
+                  style={{
+                    border: "none",
+                    background: COLORS.green,
+                    color: "#fff",
+                    fontFamily: "'Nunito Sans', sans-serif",
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  保存する
+                </button>
+              </div>
+              <p
                 style={{
-                  flex: 1,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 8,
-                  padding: "7px 10px",
+                  margin: 0,
                   fontFamily: "'Nunito Sans', sans-serif",
-                  fontSize: 13,
-                  color: COLORS.ink,
-                  background: COLORS.surface,
-                  outline: "none",
-                }}
-              />
-              <button
-                onClick={() => apiKey && setShowKeyInput(false)}
-                style={{
-                  border: "none",
-                  background: COLORS.green,
-                  color: "#fff",
-                  fontFamily: "'Nunito Sans', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 12.5,
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
+                  fontSize: 11.5,
+                  color: COLORS.inkSoft,
+                  lineHeight: 1.5,
                 }}
               >
-                設定する
-              </button>
+                この端末のブラウザに保存され、次回からは入力不要になります。共有のPCなどでは保存しないでください。
+              </p>
             </div>
           )}
           {!showKeyInput && (
-            <button
-              onClick={() => setShowKeyInput(true)}
-              style={{
-                marginTop: 10,
-                border: "none",
-                background: "none",
-                color: COLORS.inkSoft,
-                fontFamily: "'Nunito Sans', sans-serif",
-                fontSize: 12,
-                textDecoration: "underline",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              APIキーを変更する
-            </button>
+            <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+              <button
+                onClick={() => setShowKeyInput(true)}
+                style={{
+                  border: "none",
+                  background: "none",
+                  color: COLORS.inkSoft,
+                  fontFamily: "'Nunito Sans', sans-serif",
+                  fontSize: 12,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                APIキーを変更する
+              </button>
+              <button
+                onClick={() => {
+                  saveApiKey("");
+                  setShowKeyInput(true);
+                }}
+                style={{
+                  border: "none",
+                  background: "none",
+                  color: COLORS.inkSoft,
+                  fontFamily: "'Nunito Sans', sans-serif",
+                  fontSize: 12,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                保存したキーを削除
+              </button>
+            </div>
           )}
         </div>
 
@@ -1080,6 +1145,7 @@ export default function App() {
             gap: 8,
             padding: "4px 20px 14px",
             borderBottom: `1px solid ${COLORS.border}`,
+            flexShrink: 0,
           }}
         >
           <button onClick={() => setActiveTab("chat")} style={tabButtonStyle(activeTab === "chat")}>
@@ -1101,7 +1167,9 @@ export default function App() {
             ref={scrollRef}
             style={{
               flex: 1,
+              minHeight: 0,
               overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
               padding: "20px 20px 12px",
               display: "flex",
               flexDirection: "column",
@@ -1154,7 +1222,7 @@ export default function App() {
             })}
           </div>
         ) : (
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <CalendarTab history={history} />
           </div>
         )}
@@ -1166,6 +1234,7 @@ export default function App() {
               padding: "14px 20px 20px",
               borderTop: `1px solid ${COLORS.border}`,
               background: COLORS.bg,
+              flexShrink: 0,
             }}
           >
             <div
