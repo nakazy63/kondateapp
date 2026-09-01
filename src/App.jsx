@@ -505,7 +505,7 @@ function RecipeCard({ data, recordedDate, onAnother, onRecord }) {
               borderRadius: 8,
               padding: "6px 10px",
               fontFamily: "'Nunito Sans', sans-serif",
-              fontSize: 13,
+              fontSize: 16,
               color: COLORS.ink,
               background: COLORS.surfaceAlt,
             }}
@@ -804,11 +804,11 @@ export default function App() {
   const [showKeyInput, setShowKeyInput] = useState(true);
   const [activeTab, setActiveTab] = useState("chat");
   const [history, setHistory] = useState([]);
-  const scrollRef = useRef(null);
+  const bottomRef = useRef(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages]);
 
@@ -974,18 +974,18 @@ export default function App() {
   return (
     <div
       style={{
-        height: "100dvh",
+        minHeight: "100dvh",
         background: COLORS.bg,
         display: "flex",
         justifyContent: "center",
-        overflow: "hidden",
       }}
     >
       <style>{`
         ${FONT_IMPORT}
         @keyframes kondate-spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
-        html, body, #root { height: 100%; margin: 0; }
+        body { margin: 0; }
+        input, textarea { font-size: 16px; }
         ::placeholder { color: ${COLORS.inkSoft}; opacity: 0.7; }
       `}</style>
 
@@ -995,8 +995,6 @@ export default function App() {
           maxWidth: 560,
           display: "flex",
           flexDirection: "column",
-          height: "100%",
-          minHeight: 0,
         }}
       >
         {/* ヘッダー */}
@@ -1004,7 +1002,6 @@ export default function App() {
           style={{
             padding: "22px 20px 16px",
             background: COLORS.bg,
-            flexShrink: 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1058,7 +1055,7 @@ export default function App() {
                     borderRadius: 8,
                     padding: "7px 10px",
                     fontFamily: "'Nunito Sans', sans-serif",
-                    fontSize: 13,
+                    fontSize: 16,
                     color: COLORS.ink,
                     background: COLORS.surface,
                     outline: "none",
@@ -1145,7 +1142,6 @@ export default function App() {
             gap: 8,
             padding: "4px 20px 14px",
             borderBottom: `1px solid ${COLORS.border}`,
-            flexShrink: 0,
           }}
         >
           <button onClick={() => setActiveTab("chat")} style={tabButtonStyle(activeTab === "chat")}>
@@ -1164,12 +1160,7 @@ export default function App() {
         {/* コンテンツ */}
         {activeTab === "chat" ? (
           <div
-            ref={scrollRef}
             style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: "auto",
-              WebkitOverflowScrolling: "touch",
               padding: "20px 20px 12px",
               display: "flex",
               flexDirection: "column",
@@ -1220,9 +1211,10 @@ export default function App() {
                 );
               return null;
             })}
+            <div ref={bottomRef} />
           </div>
         ) : (
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+          <div>
             <CalendarTab history={history} />
           </div>
         )}
@@ -1234,7 +1226,8 @@ export default function App() {
               padding: "14px 20px 20px",
               borderTop: `1px solid ${COLORS.border}`,
               background: COLORS.bg,
-              flexShrink: 0,
+              position: "sticky",
+              bottom: 0,
             }}
           >
             <div
@@ -1265,7 +1258,7 @@ export default function App() {
                   background: "transparent",
                   padding: "10px 12px",
                   fontFamily: "'Nunito Sans', sans-serif",
-                  fontSize: 14.5,
+                  fontSize: 16,
                   color: COLORS.ink,
                   resize: "none",
                   maxHeight: 120,
@@ -1305,3 +1298,4 @@ export default function App() {
     </div>
   );
 }
+  
